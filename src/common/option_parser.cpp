@@ -37,7 +37,7 @@ void option_parser_t::help(){
 }
 
 void option_parser_t::update_img(sim_t& sim, const char* file){
-    
+    printf("update img in:%s\n",file);
     sim.file = (char *)file;
     printf("update img:%s\n",sim.file);
 }

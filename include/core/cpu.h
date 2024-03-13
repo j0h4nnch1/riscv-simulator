@@ -2,6 +2,7 @@
 #define __CPU_H
 
 #include <cstdint>
+#include "register_file.h"
 
 class cpu{
 public:

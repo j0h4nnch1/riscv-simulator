@@ -7,7 +7,9 @@
 #include <map>
 #include <assert.h>
 #include <vector>
+#include <core/cpu.h>
 
+//forward define class to update file name
 class option_parser_t;
 
 class sim_t{
@@ -26,11 +28,13 @@ private:
     
 public:
     sim_t(){}
-    char* file = "dummy-riscv32-nemu.elf";
+    // char* file = "dummy-riscv32-nemu.elf";
+    char* file = nullptr;
 
     void run();
-    void load_img();
-    std::map<std::string, uint32_t> load_elf(MMU& iv_mem, const char* file);
+    void reset();
+    void load_img(mmu_t& iv_mem);
+    std::map<std::string, uint32_t> load_elf(mmu_t& iv_mem, const char* file);
     char* get_filename();
     friend class option_paser_t;
 };

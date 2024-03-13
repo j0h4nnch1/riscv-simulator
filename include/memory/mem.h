@@ -6,33 +6,33 @@
 #define VADDR_BASE 0x80000000
 #define PADDR_BASE 0x80000000
 #define RESET_VECTOR VADDR_BASE
-class MMU{
+#define MEM_SIZE 0x8000000
+
+class mmu_t{
 public:
-    uint32_t vaddr2paddr(uint32_t vaddr, uint32_t paddr){
-        paddr = vaddr;
-        return paddr;
+    mmu_t(){
+        this->phymem = new uint8_t[MEM_SIZE];
     }
-    uint32_t paddr2vaddr(uint32_t vaddr, uint32_t paddr){
-        vaddr = paddr;
-        return vaddr;
+    uint32_t host2guest(uint8_t* addr);
+    uint8_t* guest2host(uint32_t addr);
+    /**
+     * addr: host addr
+     * len : read len 1/2/4 byte
+    */
+    uint32_t read_host(void* addr, uint32_t len);
+    /**
+     * addr: host addr
+     * 
+    */
+    template <typename T>
+    void write_host(void* addr, const T& data);
+    void init();
+    void dump_memory(uint32_t start, uint32_t size);
+    ~mmu_t(){
+        delete phymem;
     }
-    void* write(void* dest, const void* src, uint32_t size){
-        char* dest_char = (char*)dest;
-        const char* src_char = (const char*)src;
-        for(uint32_t i = 0; i < size; i++){
-            dest_char[i] = src_char[i];
-        }
-        return dest;
-    }
-    void* read(){
-
-    }
-    void init(){
-        //todo MMU func
-    };
-    
 private:
-
+    uint8_t* phymem;
 };
 
 #endif
