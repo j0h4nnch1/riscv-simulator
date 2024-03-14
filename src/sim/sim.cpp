@@ -5,6 +5,7 @@
 #include <fcntl.h>    //file
 #include <unistd.h>
 #include "common/elf.h"
+#include <readline/readline.h> //for input
 
 void sim_t::load_payload(const std::string& payload){
     memcpy((void*)RESET_VECTOR, (void*)payload.c_str(), sizeof(payload));
@@ -16,22 +17,50 @@ char* sim_t::get_filename(){
 
 void sim_t::reset(){
     printf("reset\n");
-    cpu processor(RESET_VECTOR);
 }
 
-void sim_t::run(){
-    mmu_t iv_mem;
+void sim_t::win_run(cpu_t& cpu, mmu_t& iv_mem, riscv32_cpu_state& state){
+    cpu.init(state);
+    printf("init success, pc:%lx\n", state.pc);
+    char* str = nullptr;
+    for( ; str = readline("(sim) > "); ){
+        if(str==nullptr) continue;
+        switch (*str){
+            case 'r':
+                printf("run a command\n");
+                //todo run cpu
+                cpu.fetch_decode_exec(iv_mem, state);
+                break;
+            case 'd':
+                printf("dump reg\n");
+                break;
+            case 'h':
+                printf("input r/d/h \n");
+                break;
+            case 'q':
+                printf("exit emu\n");
+                return ;
+                break;
+            default:
+                printf("not support\n");
+                break;
+        }
+    }
+}
+
+void sim_t::run(cpu_t& cpu, mmu_t& iv_mem){
+    riscv32_cpu_state state = {};
     iv_mem.init();// init MMU, nothing for now
     printf("before load_elf:%s\n", this->get_filename());
     this->load_elf(iv_mem, this->file);
-    this->reset();
-    // load_payload(); //load program to mem
+    this->win_run(cpu, iv_mem, state);
+    // this->reset();
     // cpu.run(); //fetch->decode->run->updatepc
 }
 
 void sim_t::load_img(mmu_t& iv_mem){
     memcpy((void*)iv_mem.guest2host(RESET_VECTOR), (void*)(this->img), sizeof(this->img));
-    uint32_t temp = iv_mem.read_host((void*)iv_mem.guest2host(RESET_VECTOR + 4), 4);
+    uint32_t temp = iv_mem.read_host((void*)iv_mem.guest2host(RESET_VECTOR ), 4);
     printf("data in mem:%lx\n", temp);
 }
 
@@ -70,10 +99,12 @@ std::map<std::string, uint32_t> sim_t::load_elf(mmu_t& iv_mem, const char* file)
             && phdr[i].p_filesz!=0){
             printf("poffset:%d\n", phdr[i].p_offset);
             printf("before write, paddr: %p, src_addr: %p, size:%d\n", (void*)phdr[i].p_paddr, (void*)((uint8_t*)buffer + phdr[i].p_offset), phdr[i].p_filesz);
-            // iv_mem.write_host(phdr[i].p_paddr, (void*)((uint8_t*)buffer + phdr[i].p_offset), phdr[i].p_filesz);
+            // iv_mem.write_host((void*)iv_mem.guest2host(phdr[i].p_paddr), (uint32_t)(*((uint8_t*)buffer + phdr[i].p_offset)));
             memcpy((void*)iv_mem.guest2host(phdr[i].p_paddr), (void*)((uint8_t*)buffer + phdr[i].p_offset), phdr[i].p_filesz);
-            uint32_t temp = iv_mem.read_host((void*)iv_mem.guest2host(RESET_VECTOR + 4), 4);
-            printf("data in mem:%lx\n", temp);
+            // uint32_t temp = iv_mem.read_host((void*)iv_mem.guest2host(RESET_VECTOR), 4);
+            // printf("data in mem:%lx\n", temp);
+            // printf("start addr:%lx", reinterpret_cast<uint32_t*>(iv_mem.guest2host(RESET_VECTOR)));
+            iv_mem.dump_memory(RESET_VECTOR, 14);
             printf("paddr:%lx, vaddr:%lx\n",phdr[i].p_paddr, phdr[i].p_vaddr);
         }
     }

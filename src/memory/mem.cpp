@@ -43,6 +43,9 @@ void mmu_t::write_host(void* addr, const T& data){
             printf("not support len\n");
     }
 }
+uint32_t mmu_t::read(uint32_t addr, uint32_t len){
+    return read_host((void*)guest2host(addr),len);
+}
 
 void mmu_t::init(){}
 
@@ -50,8 +53,15 @@ void mmu_t::dump_memory(uint32_t start, uint32_t size){
     // iv_mem.read_host((void*)iv_mem.guest2host(RESET_VECTOR + 4), 4);
     printf("----dump memory start----\n");
     for(int i = 0; i < size; ++i){
-        uint32_t temp = read_host((void*)guest2host(RESET_VECTOR + 4 * i), 4);
-        printf("%08x\n", temp);
+        uint32_t temp = read_host((void*)guest2host(start + 4 * i), 4);
+        printf("0x%08x : %08x\n", start + 4 * i, temp);
     }
     printf("----dump memory end----\n");
+}
+
+uint32_t mmu_t::fetch(uint32_t pc){
+    printf(">%s, pc: %lx\n", __FUNCTION__, pc);
+    uint32_t val = this->read(pc, 4);
+    printf("<%s\n", __FUNCTION__);
+    return val;
 }

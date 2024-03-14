@@ -4,8 +4,9 @@ SRC := $(WORK_DIR)/src
 BUILD_DIR := $(WORK_DIR)/build
 INC_DIR := $(WORK_DIR)/include
 INCLUDES = $(addprefix -I, $(INC_DIR))
-CXXFLAGS := -std=c++11 -Wall -Wextra $(INCLUDES)
-LDFLAGS :=
+#close warning for now
+CXXFLAGS := -std=c++11 -Wall -Wextra -w $(INCLUDES)
+LDFLAGS := -lreadline
 
 SRCS := $(wildcard $(SRC)/**/*.cpp) $(wildcard $(SRC)/*.cpp)
 OBJS := $(patsubst $(SRC)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS))
@@ -15,7 +16,7 @@ OBJS := $(patsubst $(SRC)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS))
 all: $(BUILD_DIR) $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(LDFLAGS) $^ -o $@
+	$(CXX)  $^ -o $@ $(LDFLAGS)
 
 $(BUILD_DIR)/%.o: $(SRC)/%.cpp
 	@mkdir -p $(@D)

@@ -10,9 +10,6 @@ void option_parser_t::parse(char** argv){
     char** argv1 = argv + 1;
     for(char* opt; ((opt=*argv1)!=NULL)&&opt[0] == '-'; argv1++){
         bool found = false;
-        // for(auto it = opts.begin(); it!=opts.end(); it++){
-        //     printf("opt:%c %c %s\n", opt, it->c, it->s);
-        // }
         for(auto it = opts.begin(); !found && it != opts.end(); it++){
             size_t str_len = it->s == NULL? 0 : strlen(it->s);
             printf("opt[1]:%c, it->c:%c, it->s:%s\n", opt[1], it->c, it->s);
@@ -21,7 +18,6 @@ void option_parser_t::parse(char** argv){
             char* optarg = NULL;
             if(chr_match||str_match){
                 optarg = opt + 3;
-                // printf("opt1:%s, opt2:%s, opt3:%s, optarg:%s\n", (opt+1), (opt+2), (opt+3), optarg);
                 found = true;
                 it->action(optarg);
             }

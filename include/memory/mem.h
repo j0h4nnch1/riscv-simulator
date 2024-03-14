@@ -26,11 +26,17 @@ public:
     */
     template <typename T>
     void write_host(void* addr, const T& data);
+    /**
+     * g_addr: guest addr
+    */
+    uint32_t read(uint32_t g_addr, uint32_t len);
+    uint32_t fetch(uint32_t pc);
     void init();
     void dump_memory(uint32_t start, uint32_t size);
     ~mmu_t(){
         delete phymem;
     }
+
 private:
     uint8_t* phymem;
 };
