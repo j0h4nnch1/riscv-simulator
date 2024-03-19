@@ -12,5 +12,11 @@ typedef struct {
   } gpr[32];
 
   uint32_t pc;
+  /**
+   * User: 00
+   * Supervisor: 01
+   * Machine: 11
+  */
+  uint32_t mode;
 } riscv32_cpu_state;
 #endif

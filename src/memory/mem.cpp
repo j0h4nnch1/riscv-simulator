@@ -25,26 +25,67 @@ uint32_t mmu_t::read_host(void* addr, uint32_t len){
     return 0;
 }
 
+uint32_t mmu_t::read_host_sign(void* addr, uint32_t len, bool sign){
+    switch (len){
+    case 1:
+        return sign? *(int8_t*)addr:*(uint8_t*)addr;
+    case 2:
+        return sign? *(int16_t*)addr:*(uint16_t*)addr;
+    case 4:
+        return *(uint32_t*)addr;
+    default:
+        printf("not support len\n");
+        break;
+    }
+    return 0;
+}
+
 template <typename T>
 void mmu_t::write_host(void* addr, const T& data){
     uint32_t size = sizeof(data);
     switch (size){
         case 1:
-            (uint8_t*)addr = data;
+            *(uint8_t*)addr = data;
             break;
         case 2:
-            (uint16_t*)addr = data;
+            *(uint16_t*)addr = data;
             break;
         case 4:
-            (uint32_t*)addr = data;
+            *(uint32_t*)addr = data;
             break;
         default:
             break;
             printf("not support len\n");
     }
 }
-uint32_t mmu_t::read(uint32_t addr, uint32_t len){
-    return read_host((void*)guest2host(addr),len);
+uint32_t mmu_t::read(uint32_t addr, uint32_t data){
+    return read_host((void*)guest2host(addr),data);
+}
+
+void mmu_t::write(uint32_t addr, uint32_t len){
+    return write_host((void*)guest2host(addr),len);
+}
+
+uint32_t mmu_t::load(uint32_t addr, uint32_t len, bool sign){
+    return read_host_sign((void*)guest2host(addr), len, sign);
+}
+
+uint32_t mmu_t::store(uint32_t addr, uint32_t data, uint32_t size){
+    switch (size){
+        case 1:
+            *(uint8_t*)addr = data;
+            break;
+        case 2:
+            *(uint16_t*)addr = data;
+            break;
+        case 4:
+            *(uint32_t*)addr = data;
+            break;
+        default:
+            break;
+            printf("not support len\n");
+    }
+    // return write_host((void*)guest2host(addr), data);
 }
 
 void mmu_t::init(){}

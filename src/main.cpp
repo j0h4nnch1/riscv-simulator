@@ -11,6 +11,7 @@ int main(int argc, char** argv){
     mmu_t iv_mem;
     parser.add_option('h', "help", [&](const char UNUSED *s){parser.help();});
     parser.add_option('i', "img", [&](const char UNUSED *s){parser.update_img(sim, s);});
+    // parser.add_option('f', "file", [&](const char UNUSED *s){parser.update_img(sim, s);});
     parser.parse(argv);
     sim.run(cpu, iv_mem);
 

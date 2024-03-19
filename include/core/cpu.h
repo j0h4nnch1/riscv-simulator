@@ -16,9 +16,9 @@ typedef uint64_t pc_t;
 class cpu_t{
 public:
     uint32_t fetch(uint32_t vaddr);
-    void decode_run(riscv32_cpu_state state, instr data);
+    void decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem);
     uint32_t execute_one(uint32_t data);
-    pc_t fetch_decode_exec(mmu_t& iv_mem, riscv32_cpu_state cpu);
+    pc_t fetch_decode_exec(mmu_t& iv_mem, riscv32_cpu_state& cpu);
     void register_func(decoder decode);
     void init(riscv32_cpu_state& cpu);
 private:

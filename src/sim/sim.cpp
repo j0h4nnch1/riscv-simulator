@@ -7,8 +7,20 @@
 #include "common/elf.h"
 #include <readline/readline.h> //for input
 
-void sim_t::load_payload(const std::string& payload){
-    memcpy((void*)RESET_VECTOR, (void*)payload.c_str(), sizeof(payload));
+void sim_t::load_payload(const std::string& payload, mmu_t& iv_mem){
+    FILE* f = fopen(payload.c_str(), "rb");
+    fseek(f, 0, SEEK_END);
+    long size =  ftell(f);
+    fseek(f, 0, SEEK_SET);
+    uint8_t* ram_image = (uint8_t* )malloc(size);
+    if( fread( ram_image, size, 1, f ) != 1){
+        printf("Error: Could not load image.\n" );
+    }
+    fclose(f);
+    printf("payload :%s, size: %d\n", payload.c_str(), size);
+    memcpy((void*)iv_mem.guest2host(RESET_VECTOR), (void*)ram_image, size);
+    printf("load payload success\n");
+    iv_mem.dump_memory(RESET_VECTOR, 16);   
 }
 
 char* sim_t::get_filename(){
@@ -69,6 +81,11 @@ std::map<std::string, uint32_t> sim_t::load_elf(mmu_t& iv_mem, const char* file)
     if(file == nullptr){
         printf("load default img\n");
         load_img(iv_mem);// using default
+        std::map<std::string, uint32_t> symbols;
+        return symbols;
+    }
+    if(strcmp(file, "Image") == 0){
+        load_payload(file, iv_mem);
         std::map<std::string, uint32_t> symbols;
         return symbols;
     }

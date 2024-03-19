@@ -18,7 +18,7 @@ private:
     const uint32_t img[1] = {
         0x12000513,
     };
-    void load_payload(const std::string &payload);
+    void load_payload(const std::string &payload, mmu_t& iv_mem);
     
 public:
     sim_t(){}
