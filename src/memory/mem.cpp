@@ -28,10 +28,12 @@ uint32_t mmu_t::read_host(void* addr, uint32_t len){
 uint32_t mmu_t::read_host_sign(void* addr, uint32_t len, bool sign){
     switch (len){
     case 1:
+        // printf("try to load 1 byte data from %08x\n", host2guest((uint8_t*)addr));
         return sign? *(int8_t*)addr:*(uint8_t*)addr;
     case 2:
         return sign? *(int16_t*)addr:*(uint16_t*)addr;
     case 4:
+        // printf("try to load 4 byte data from %08x\n", host2guest((uint8_t*)addr));
         return *(uint32_t*)addr;
     default:
         printf("not support len\n");
@@ -62,8 +64,8 @@ uint32_t mmu_t::read(uint32_t addr, uint32_t data){
     return read_host((void*)guest2host(addr),data);
 }
 
-void mmu_t::write(uint32_t addr, uint32_t len){
-    return write_host((void*)guest2host(addr),len);
+void mmu_t::write(uint32_t addr, uint32_t data){
+    return write_host((void*)guest2host(addr),data);
 }
 
 uint32_t mmu_t::load(uint32_t addr, uint32_t len, bool sign){
@@ -71,15 +73,18 @@ uint32_t mmu_t::load(uint32_t addr, uint32_t len, bool sign){
 }
 
 uint32_t mmu_t::store(uint32_t addr, uint32_t data, uint32_t size){
+    
     switch (size){
         case 1:
-            *(uint8_t*)addr = data;
+            *guest2host(addr) = data;
             break;
         case 2:
-            *(uint16_t*)addr = data;
+            *(uint16_t*)guest2host(addr) = data;
             break;
         case 4:
-            *(uint32_t*)addr = data;
+            // printf("try to store a data\n");
+            *(uint32_t*)guest2host(addr) = data;
+
             break;
         default:
             break;
@@ -101,8 +106,8 @@ void mmu_t::dump_memory(uint32_t start, uint32_t size){
 }
 
 uint32_t mmu_t::fetch(uint32_t pc){
-    printf(">%s, pc: %lx\n", __FUNCTION__, pc);
+    // printf(">%s, pc: %lx\n", __FUNCTION__, pc);
     uint32_t val = this->read(pc, 4);
-    printf("<%s\n", __FUNCTION__);
+    // printf("<%s\n", __FUNCTION__);
     return val;
 }

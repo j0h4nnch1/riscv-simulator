@@ -6,7 +6,9 @@
 #define VADDR_BASE 0x80000000
 #define PADDR_BASE 0x80000000
 #define RESET_VECTOR VADDR_BASE
-#define MEM_SIZE 0x8000000
+#define RAM_SIZE 0x2000000
+#define MEM_SIZE 0x4000000
+#define MEM_RANGE (VADDR_BASE + MEM_SIZE)
 
 class mmu_t{
 public:

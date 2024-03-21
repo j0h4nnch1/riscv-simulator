@@ -19,6 +19,10 @@ void sim_t::load_payload(const std::string& payload, mmu_t& iv_mem){
     fclose(f);
     printf("payload :%s, size: %d\n", payload.c_str(), size);
     memcpy((void*)iv_mem.guest2host(RESET_VECTOR), (void*)ram_image, size);
+    printf("load dtb\n");
+    uint32_t size_dtb = sizeof(default64mbdtb);
+    uint32_t pos_dtb = MEM_RANGE - size_dtb; 
+    memcpy(((void*)iv_mem.guest2host(pos_dtb)), default64mbdtb, size_dtb);
     printf("load payload success\n");
     iv_mem.dump_memory(RESET_VECTOR, 16);   
 }
