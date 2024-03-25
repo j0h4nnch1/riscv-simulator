@@ -214,7 +214,7 @@ public:
     void register_func(decoder decode);
     void init(riscv32_cpu_state& cpu);
 	uint32_t handle_exception(riscv32_cpu_state& state, uint32_t ir);
-	void dump_state(riscv32_cpu_state& state);
+	void dump_state(riscv32_cpu_state& state, instr data);
 private:
 //string, handle
     std::vector<decoder> all_inst;

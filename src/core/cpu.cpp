@@ -2,6 +2,7 @@
 #include "memory/mem.h"
 #include "core/decoder.h"
 bool first_time = false;
+uint32_t count = 0;
 uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, uint32_t time_sed){
     // printf("pc : %08x, data : [0x%08x]\n", state.pc, data.val);
 #if 0
@@ -19,6 +20,7 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
 	// Handle Timer interrupt.
 	if( ( CSR( timerh ) > CSR( timermatchh ) || ( CSR( timerh ) == CSR( timermatchh ) && CSR( timerl ) > CSR( timermatchl ) ) ) && ( CSR( timermatchh ) || CSR( timermatchl ) ) )
 	{
+        // printf("\n\n time inter\n");
 		CSR( extraflags ) &= ~4; // Clear WFI
 		CSR( mip ) |= 1<<7; //MTIP of MIP // https://stackoverflow.com/a/61916199/2926815  Fire interrupt.
 	}
@@ -38,6 +40,7 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
 	if( ( CSR( mip ) & (1<<7) ) && ( CSR( mie ) & (1<<7) /*mtie*/ ) && ( CSR( mstatus ) & 0x8 /*mie*/) )
 	{
 		// Timer interrupt.
+        // printf("\n\n time inter handle!\n");
 		trap = 0x80000007;
 		state.pc -= 4;
 	}
@@ -99,13 +102,10 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
         }
         case 0x03: // Load (0b0000011)
         {
-            
             uint32_t rs1 = state.gpr[((ir >> 15) & 0x1f)].val;
             uint32_t imm = ir >> 20;
             int32_t imm_se = imm | (( imm & 0x800 )?0xfffff000:0);
             uint32_t rsval = rs1 + imm_se;
-#define support_mmio 1
-#ifdef support_mmio
             // printf("load rsval:%08x, rs1:%08x, func:%d\n", rsval,rs1,( ir >> 12 ) & 0x7);
             if(first_time){
                 printf("pc : %08x, data : [0x%08x]\n", state.pc, data.val);
@@ -113,13 +113,11 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
                 first_time = false;
             }
 
-            // rsval += VADDR_BASE;
-            
-            // printf("load rsval:%08x, rs1:%08x, func:%d\n", rsval,rs1,( ir >> 12 ) & 0x7);
+            // if( rsval >= MEM_SIZE-3)
             if( rsval >= MEM_RANGE-3 || rsval < VADDR_BASE)
-            {
-                
-                // printf("rsval is out of MEM_SIZE : %08x", rsval);
+            {   
+                // rsval+=VADDR_BASE;
+                // printf("rsval is out of MEM_SIZE : %08x\n", rsval);
                 if( rsval >= 0x10000000 && rsval < 0x12000000 )  // UART, CLNT
                 {
                     if( rsval == 0x1100bffc ) // https://chromitem-soc.readthedocs.io/en/latest/clint.html
@@ -132,13 +130,15 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
                 }
                 else
                 {
+                    // rsval+=VADDR_BASE;
+                    // printf("load rsval:%08x, rs1:%08x, func:%d\n", rsval,rs1,( ir >> 12 ) & 0x7);
                     trap = (5+1);
                     pre_rd = rsval;
+                    // return 2;
                 }
             }
             else
             {
-#endif
                 switch( ( ir >> 12 ) & 0x7 )
                 {
                     //LB, LH, LW, LBU, LHU
@@ -153,9 +153,9 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
                     case 5: pre_rd = iv_mem.load(rsval, 2, false); break;
                     default: trap = (2+1);
                 }
-#ifdef support_mmio
+
             }
-#endif
+
             break;
         }
         case 0x23: // Store 0b0100011
@@ -165,24 +165,21 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
             uint32_t rs2 = state.gpr[((ir >> 20) & 0x1f)].val;
             uint32_t addy = ( ( ir >> 7 ) & 0x1f ) | ( ( ir & 0xfe000000 ) >> 20 );
             if( addy & 0x800 ) addy |= 0xfffff000;
-#ifdef support_mmio
             addy += rs1;
             rd_idx = 0;
-            if(first_time){
-                printf("pc : %08x, data : [0x%08x]\n", state.pc, data.val);
-                printf("rs1_idx : %08x, rs2_idx : %08x\n", ((ir >> 15) & 0x1f), ((ir >> 20) & 0x1f));
-                printf("store addy:%08x, rs1:%08x, rs2:%08x,func:%d\n", addy,rs1,rs2,( ir >> 12 ) & 0x7);
-                dump_state(state);
-                first_time = false;
-            }
+            // if(addy >= MEM_RANGE-3){
+            //     printf("\n addy is out range :%08x\n", addy);
+            //     printf("\n pc :%08x, data:%08x\n", state.pc, data.val);
+            //     dump_state(state, data);
+            //     return 2;
+            // }
+
             // printf("addy:%08x, ir:%03x, rs2:%08x\n", addy, ( ir >> 12 ) & 0x7, rs2);
             if( addy >= MEM_RANGE-3 || addy < VADDR_BASE)
             {
-                // printf("addy:%08x, ir:%03x, rs2:%08x\n", addy, ( ir >> 12 ) & 0x7, rs2);
-                // printf("add op\n");
-                // printf("addy:%08x, ir:%03x, rs2:%08x\n", addy+VADDR_BASE, ( ir >> 12 ) & 0x7, rs2);
                 if( addy >= 0x10000000 && addy < 0x12000000 )
                 {
+                    // printf("addy:%08x, ir:%03x, rs2:%08x\n", addy, ( ir >> 12 ) & 0x7, rs2);
                     // Should be stuff like SYSCON, 8250, CLNT
                     if( addy == 0x11004004 ) //CLNT
                         CSR( timermatchh ) = rs2;
@@ -205,7 +202,7 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
             }
             else
             {
-#endif
+
                 switch( ( ir >> 12 ) & 0x7 )
                 {
                     //SB, SH, SW
@@ -214,9 +211,9 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
                     case 2: iv_mem.store( addy, rs2, 4); break;
                     default: trap = (2+1);
                 }
-#ifdef support_mmio
+
             }
-#endif
+
             break;
         }
         case 0x13: // Op-immediate 0b0010011
@@ -321,10 +318,9 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
                     case 6: writeval = pre_rd | rs1imm; break;	//CSRRSI
                     case 7: writeval = pre_rd & ~rs1imm; break;	//CSRRCI
                 }
-
+                // printf("\n\n write csr no:%08x, wirteval:%08x\n", csrno, writeval);
                 switch( csrno )
                 {
-                    // printf("write csr no:%d\n", csrno);
                     case 0x340: SETCSR( mscratch, writeval ); break;
                     case 0x305: SETCSR( mtvec, writeval ); break;
                     case 0x304: SETCSR( mie, writeval ); break;
@@ -351,7 +347,7 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
             }
             else if( microop == 0x0 ) // "SYSTEM" 0b000 ECALL/EBREAK
             {
-                printf("SYSTEM\n");
+                // printf("SYSTEM\n");
                 rd_idx = 0;
                 if( csrno == 0x105 ) //WFI (Wait for interrupts)
                 {
@@ -371,6 +367,7 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
                     SETCSR( mstatus , (( startmstatus & 0x80) >> 4) | ((startextraflags&3) << 11) | 0x80 );
                     SETCSR( extraflags, (startextraflags & ~3) | ((startmstatus >> 11) & 3) );
                     state.pc = CSR( mepc ) -4;
+                    // printf("\n pc:%08x, line:%d\n",state.pc, __LINE__);
                 }
                 else
                 {
@@ -387,7 +384,7 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
             break;
         }
 #endif
-#define support_rv32a 1
+#define support_rv32a 0
 #ifdef support_rv32a
         case 0x2f: // RV32A (0b00101111)
         {
@@ -453,20 +450,25 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
 			SETCSR( mtval, (trap > 5 && trap <= 8)? pre_rd : state.pc );
         }
         state.mepc = state.pc;
+        state.mepc += 4;
+        // printf("\n mepc:%08x, line:%d\n",state.mepc, __LINE__);
         // SETCSR( mepc, pc ); //TRICKY: The kernel advances mepc automatically.
 		//CSR( mstatus ) & 8 = MIE, & 0x80 = MPIE
 		// On an interrupt, the system moves current MIE into MPIE
 		SETCSR( mstatus, (( CSR( mstatus ) & 0x08) << 4) | (( CSR( extraflags ) & 3 ) << 11) );
 		state.pc = (CSR( mtvec ) - 4);
+        // printf("\n pc:%08x, line:%d\n",state.pc, __LINE__);
 
 		// If trapping, always enter machine mode.
 		CSR( extraflags ) |= 3;
 
 		trap = 0;
 		state.pc += 4;
+        // printf("\n pc:%08x, line:%d\n",state.pc, __LINE__);
         return 0;
     }
-
+    state.pc += 4;
+    // printf("\n pc:%08x, line:%d\n",state.pc, __LINE__);
     if( rd_idx )//zero reg should not be written any value
     {
         state.gpr[rd_idx].val = pre_rd;
@@ -474,13 +476,15 @@ uint32_t cpu_t::decode_run(riscv32_cpu_state& state, instr data, mmu_t& iv_mem, 
     return 0;
 }
 
-void cpu_t::dump_state(riscv32_cpu_state& state){
+void cpu_t::dump_state(riscv32_cpu_state& state, instr data){
+    printf("PC: %08x [0x%08x] ", state.pc, data.val);
     printf( "Z:%08x ra:%08x sp:%08x gp:%08x tp:%08x t0:%08x t1:%08x t2:%08x s0:%08x s1:%08x a0:%08x a1:%08x a2:%08x a3:%08x a4:%08x a5:%08x ",
     state.gpr[0].val, state.gpr[1].val, state.gpr[2].val, state.gpr[3].val, state.gpr[4].val, state.gpr[5].val, state.gpr[6].val, state.gpr[7].val,
     state.gpr[8].val, state.gpr[9].val, state.gpr[10].val, state.gpr[11].val, state.gpr[12].val, state.gpr[13].val, state.gpr[14].val, state.gpr[15].val );
 	printf( "a6:%08x a7:%08x s2:%08x s3:%08x s4:%08x s5:%08x s6:%08x s7:%08x s8:%08x s9:%08x s10:%08x s11:%08x t3:%08x t4:%08x t5:%08x t6:%08x\n",
     state.gpr[16].val, state.gpr[17].val, state.gpr[18].val, state.gpr[19].val, state.gpr[20].val, state.gpr[21].val, state.gpr[22].val, state.gpr[23].val,
     state.gpr[24].val, state.gpr[25].val, state.gpr[26].val, state.gpr[27].val, state.gpr[28].val, state.gpr[29].val, state.gpr[30].val, state.gpr[31].val );
+    printf("IR:%08x\n", data.val);
 }
 
 uint32_t cpu_t::handle_exception(riscv32_cpu_state& state, uint32_t ir){
@@ -523,15 +527,18 @@ pc_t cpu_t::fetch_decode_exec(mmu_t& iv_mem, riscv32_cpu_state& cpu){
     uint32_t max_inst = -1;
     cpu.extraflags |= 3;//machine module
     // printf(">%s \n", __FUNCTION__);
-    cpu.gpr[11].val = MEM_RANGE - sizeof(default64mbdtb);
+    cpu.gpr[11].val = MEM_RANGE - sizeof(default64mbdtb)-192;
     printf("gpr11:%08x, size:%08x\n", cpu.gpr[11].val, sizeof(default64mbdtb));
-
-    uint32_t dtb = MEM_RANGE - sizeof(default64mbdtb);
+    printf("host2guest:%08x\n", iv_mem.host2guest((uint8_t*)0xffffecb0));
+    // printf("guest2host:%08x\n", iv_mem.guest2host());
+    uint32_t dtb = MEM_RANGE - sizeof(default64mbdtb) - 192;
     printf("default %08x\n", default64mbdtb[0x13c/4]);
     printf("before write:%08x, dtb:%08x\n", iv_mem.read(dtb+0x13c, 4), dtb);
     if(iv_mem.read(dtb+0x13c, 4) == 0x00c0ff03){
-        uint32_t validram = cpu.gpr[11].val;
+        uint32_t validram = cpu.gpr[11].val - VADDR_BASE;
+        printf("\n validram:%08x\n",validram);
         uint32_t update = (validram>>24) | ((( validram >> 16 ) & 0xff) << 8 ) | (((validram>>8) & 0xff ) << 16 ) | ( ( validram & 0xff) << 24 );
+        printf("\n update:%08x\n",update);
         iv_mem.write(dtb + 0x13c, update);
         printf("wirte:%08x\n", update);
         printf("read:%08x\n", iv_mem.read(dtb + 0x13c,4));
@@ -539,18 +546,24 @@ pc_t cpu_t::fetch_decode_exec(mmu_t& iv_mem, riscv32_cpu_state& cpu){
 
 
     uint32_t last_time = GetTimeMicroseconds();
-    for(int cycle = 0; cycle < max_inst||max_inst < 0; cycle++){
+    uint32_t single_step = 0;
+    for(uint32_t cycle = 0; cycle < max_inst||max_inst < 0; cycle++){
         instr isn;
         uint32_t time_sed = GetTimeMicroseconds()-last_time;
         last_time += time_sed;
         isn.val = iv_mem.fetch(cpu.pc);
+        count++;
+        if(single_step){
+            dump_state(cpu, isn);
+        }
         uint32_t ret = decode_run(cpu, isn, iv_mem, time_sed);
-        cpu.pc += 4;
+
+        // cpu.pc += 4;
         // printf("ret is :%08x\n", ret);
         switch(ret){
             case 0: break;
             case 1:{
-                printf("1 is got !, should sleep!\n");
+                printf("\n 1 is got !, should sleep!\n");
                 // sleep(1);
                 MiniSleep();
                 break;
